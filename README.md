@@ -74,31 +74,115 @@ func main() {
 ```bash
 export QQBOT_APP_ID=your_app_id
 export QQBOT_APP_SECRET=your_secret
-
-# Send message
-go run ./cmd/send-proactive --to <openid> --text "Hello" --type c2c
-
-# List known users
-go run ./cmd/send-proactive --list
 ```
 
+#### Send Text Message
+
+```bash
+go run ./cmd/send-proactive --to <openid> --text "Hello" --type c2c
+```
+
+#### Send Media from URL
+
+```bash
+# Send image (two-step method, doesn't consume proactive message quota)
+go run ./cmd/send-proactive --to <openid> --media "https://example.com/image.jpg" --media-type image
+
+# Send video
+go run ./cmd/send-proactive --to <openid> --media "https://example.com/video.mp4" --media-type video
+
+# Send voice
+go run ./cmd/send-proactive --to <openid> --media "https://example.com/audio.mp3" --media-type voice
+
+# Send file
+go run ./cmd/send-proactive --to <openid> --media "https://example.com/doc.pdf" --media-type file
+
+# Direct send (consumes proactive message quota)
+go run ./cmd/send-proactive --to <openid> --media "https://example.com/image.jpg" --direct
+```
+
+#### Send Local File
+
+```bash
+# Send local image (max 5MB due to base64 encoding)
+go run ./cmd/send-proactive --to <openid> --file ./image.jpg --media-type image
+
+# Send local video
+go run ./cmd/send-proactive --to <openid> --file ./video.mp4 --media-type video
+
+# Send local file
+go run ./cmd/send-proactive --to <openid> --file ./document.pdf --media-type file
+```
+
+#### List Known Users
+
+```bash
+# List all users
+go run ./cmd/send-proactive --list
+
+# List C2C users only
+go run ./cmd/send-proactive --list --type c2c
+
+# List group users only
+go run ./cmd/send-proactive --list --type group
+```
+
+#### Command Options
+
+- `--to` - Target user OpenID (required for sending)
+- `--text` - Message text content
+- `--type` - Message type: `c2c` (default) or `group`
+- `--media` - Media URL for remote files
+- `--media-type` - Media type: `image`, `video`, `voice`, or `file` (default: `image`)
+- `--direct` - Send media directly (consumes proactive message quota)
+- `--file` - Local file path (max 5MB)
+- `--list` - List known users
+
 ### Proactive API Server
+
+Start the HTTP API server:
 
 ```bash
 go run ./cmd/proactive-server --port 3721
 ```
 
-API endpoints:
-- `POST /send` - Send proactive message
-- `GET /users` - List known users
-- `GET /users/stats` - User statistics
+#### API Endpoints
 
-Example:
+**GET /** - Server info
 ```bash
+curl http://localhost:3721/
+```
+
+**POST /send** - Send proactive message
+```bash
+# Send text
 curl -X POST http://localhost:3721/send \
   -H "Content-Type: application/json" \
   -d '{"to":"openid","text":"Hello!","type":"c2c"}'
+
+# Send to group
+curl -X POST http://localhost:3721/send \
+  -H "Content-Type: application/json" \
+  -d '{"to":"group_openid","text":"Hello group!","type":"group"}'
 ```
+
+**GET /users** - List known users
+```bash
+# List all users
+curl http://localhost:3721/users
+
+# Filter by type
+curl http://localhost:3721/users?type=c2c
+```
+
+**GET /users/stats** - User statistics
+```bash
+curl http://localhost:3721/users/stats
+```
+
+#### Server Options
+
+- `--port` - Server port (default: `3721`)
 
 ---
 
