@@ -22,9 +22,5 @@ func NewClient(appID, clientSecret string) *Client {
 }
 
 func (c *Client) Connect() error {
-	if _, err := c.API.GetAccessToken(); err != nil {
-		return err
-	}
-	c.API.StartTokenRefresh()
 	return c.Gateway.Connect()
 }

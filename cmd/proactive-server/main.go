@@ -19,9 +19,9 @@ func main() {
 	flag.Parse()
 
 	appID := os.Getenv("QQBOT_APP_ID")
-	secret := os.Getenv("QQBOT_CLIENT_SECRET")
+	secret := os.Getenv("QQBOT_APP_SECRET")
 	if appID == "" || secret == "" {
-		log.Fatal("QQBOT_APP_ID and QQBOT_CLIENT_SECRET required")
+		log.Fatal("QQBOT_APP_ID and QQBOT_APP_SECRET required")
 	}
 
 	client = qqbot.NewClient(appID, secret)

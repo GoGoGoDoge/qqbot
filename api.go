@@ -1,76 +1,66 @@
 package qqbot
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
-	"sync"
+	"context"
 	"time"
-)
 
-const (
-	APIBase  = "https://api.sgroup.qq.com"
-	TokenURL = "https://bots.qq.com/app/getAppAccessToken"
+	"github.com/tencent-connect/botgo"
+	"github.com/tencent-connect/botgo/openapi"
+	"github.com/tencent-connect/botgo/token"
+	"golang.org/x/oauth2"
 )
 
 type API struct {
-	appID        string
-	clientSecret string
-	token        string
-	tokenExpiry  time.Time
-	mu           sync.RWMutex
+	appID       string
+	appSecret   string
+	tokenSource oauth2.TokenSource
+	client      openapi.OpenAPI
+	ctx         context.Context
+	cancel      context.CancelFunc
 	MarkdownMode bool
-	stopRefresh  chan struct{}
 }
 
-func NewAPI(appID, clientSecret string) *API {
-	return &API{appID: appID, clientSecret: clientSecret, stopRefresh: make(chan struct{})}
+func NewAPI(appID, appSecret string) *API {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	credentials := &token.QQBotCredentials{
+		AppID:     appID,
+		AppSecret: appSecret,
+	}
+	tokenSource := token.NewQQBotTokenSource(credentials)
+
+	return &API{
+		appID:       appID,
+		appSecret:   appSecret,
+		tokenSource: tokenSource,
+		client:      botgo.NewOpenAPI(appID, tokenSource).WithTimeout(5 * time.Second),
+		ctx:         ctx,
+		cancel:      cancel,
+	}
 }
 
-func (a *API) StartTokenRefresh() {
-	go func() {
-		ticker := time.NewTicker(10 * time.Minute)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				a.GetAccessToken()
-			case <-a.stopRefresh:
-				return
-			}
-		}
-	}()
+func (a *API) StartTokenRefresh() error {
+	return token.StartRefreshAccessToken(a.ctx, a.tokenSource)
 }
 
 func (a *API) StopTokenRefresh() {
-	close(a.stopRefresh)
+	if a.cancel != nil {
+		a.cancel()
+	}
 }
 
-func (a *API) GetAccessToken() (string, error) {
-	a.mu.RLock()
-	if time.Now().Before(a.tokenExpiry.Add(-5 * time.Minute)) {
-		token := a.token
-		a.mu.RUnlock()
-		return token, nil
-	}
-	a.mu.RUnlock()
+func (a *API) GetAppID() string {
+	return a.appID
+}
 
-	a.mu.Lock()
-	defer a.mu.Unlock()
+func (a *API) GetTokenSource() oauth2.TokenSource {
+	return a.tokenSource
+}
 
-	body, _ := json.Marshal(map[string]string{"appId": a.appID, "clientSecret": a.clientSecret})
-	resp, err := http.Post(TokenURL, "application/json", bytes.NewReader(body))
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
+func (a *API) GetClient() openapi.OpenAPI {
+	return a.client
+}
 
-	var result struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn   int    `json:"expires_in"`
-	}
-	json.NewDecoder(resp.Body).Decode(&result)
-	a.token = result.AccessToken
-	a.tokenExpiry = time.Now().Add(time.Duration(result.ExpiresIn) * time.Second)
-	return a.token, nil
+func (a *API) GetContext() context.Context {
+	return a.ctx
 }

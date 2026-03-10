@@ -4,6 +4,8 @@
 
 Go client library for QQ Bot API - supports C2C private chats, group messages, and channel messages.
 
+Built on top of [tencent-connect/botgo](https://github.com/tencent-connect/botgo) official SDK.
+
 [![Go Version](https://img.shields.io/badge/Go-1.18+-00ADD8)](https://golang.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 [![QQ Bot](https://img.shields.io/badge/QQ_Bot-API_v2-red)](https://bot.q.qq.com/wiki/)
@@ -46,7 +48,7 @@ import (
 func main() {
     client := qqbot.NewClient(
         os.Getenv("QQBOT_APP_ID"),
-        os.Getenv("QQBOT_CLIENT_SECRET"),
+        os.Getenv("QQBOT_APP_SECRET"),
     )
 
     client.Gateway.OnC2CMessage(func(e qqbot.C2CMessageEvent) {
@@ -71,7 +73,7 @@ func main() {
 
 ```bash
 export QQBOT_APP_ID=your_app_id
-export QQBOT_CLIENT_SECRET=your_secret
+export QQBOT_APP_SECRET=your_secret
 
 # Send message
 go run ./cmd/send-proactive --to <openid> --text "Hello" --type c2c
